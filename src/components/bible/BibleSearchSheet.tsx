@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type TouchEvent as ReactTouchEvent, type UIEvent as ReactUIEvent } from 'react';
 import { createPortal } from 'react-dom';
-import { ArrowRight, BookOpen, Layers3, Loader2, Search, X } from 'lucide-react';
+import { Bookmark, BookmarkCheck, BookOpen, Copy, Layers3, Loader2, Search, X } from 'lucide-react';
 import { searchBibleVerses } from '../../services/bibleSearch';
 import { aiSearchBibleVerses, type AiBibleSearchMeta, type AiBibleSearchSection } from '../../services/aiBibleSearch';
 import type { BibleVerseRecord } from '../../types/bible';
@@ -9,13 +9,24 @@ import { sanitizeScriptureText } from '../../utils/textUtils';
 interface BibleSearchSheetProps {
   onClose: () => void;
   onNavigate: (verse: BibleVerseRecord) => void;
+  onCopy?: (verse: BibleVerseRecord) => void;
+  onToggleSave?: (verse: BibleVerseRecord) => void;
+  isSaved?: (ref: string) => boolean;
   T: Record<string, string>;
   fontSize?: string;
+}
+
+interface StoredSavedVerse {
+  ref: string;
+  text: string;
+  date?: string;
+  [key: string]: unknown;
 }
 
 const LIMIT = 50;
 const VERSE_ONLY_SCROLL_TOP = 24;
 const STORAGE_KEY = 'sion_bible_search_sheet_state';
+const SAVED_STORAGE_KEY = 'gb_saved';
 
 type StoredSearch = {
   query?: string;
@@ -45,11 +56,20 @@ function writeStoredSearch(value: StoredSearch) {
   }
 }
 
-const stored = readStoredSearch();
+function readStoredSavedVerses(): StoredSavedVerse[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(SAVED_STORAGE_KEY) || '[]');
+    return Array.isArray(parsed) ? parsed.filter((item): item is StoredSavedVerse => Boolean(item && typeof item.ref === 'string')) : [];
+  } catch {
+    return [];
+  }
+}
 
-export function BibleSearchSheet({ onClose, onNavigate, T, fontSize = '0.875rem' }: BibleSearchSheetProps) {
-  const [query, setQuery] = useState(stored.query || '');
-  const [questionMode, setQuestionMode] = useState(Boolean(stored.questionMode));
+export function BibleSearchSheet({ onClose, onNavigate, onCopy, onToggleSave, isSaved, T, fontSize = '0.875rem' }: BibleSearchSheetProps) {
+  const [initialStored] = useState<StoredSearch>(() => readStoredSearch());
+  const [query, setQuery] = useState(initialStored.query || '');
+  const [questionMode, setQuestionMode] = useState(Boolean(initialStored.questionMode));
   const [results, setResults] = useState<BibleVerseRecord[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [hasMore, setHasMore] = useState(false);
@@ -57,7 +77,8 @@ export function BibleSearchSheet({ onClose, onNavigate, T, fontSize = '0.875rem'
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [searchMeta, setSearchMeta] = useState<AiBibleSearchMeta | null>(null);
-  const [verseOnly, setVerseOnly] = useState((stored.scrollTop || 0) > VERSE_ONLY_SCROLL_TOP);
+  const [verseOnly, setVerseOnly] = useState(false);
+  const [localSavedRefs, setLocalSavedRefs] = useState<Set<string>>(() => new Set(readStoredSavedVerses().map(item => item.ref)));
   const mainRef = useRef<HTMLElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const startYRef = useRef<number | null>(null);
@@ -86,6 +107,10 @@ export function BibleSearchSheet({ onClose, onNavigate, T, fontSize = '0.875rem'
   }, []);
 
   useEffect(() => {
+    writeStoredSearch({ query, questionMode, scrollTop: 0 });
+  }, [query, questionMode]);
+
+  useEffect(() => {
     if (questionMode) return;
     const trimmed = query.trim();
     const timer = window.setTimeout(() => {
@@ -106,8 +131,8 @@ export function BibleSearchSheet({ onClose, onNavigate, T, fontSize = '0.875rem'
     return map;
   }, [questionMode, searchMeta]);
 
-  const persist = (scrollTop = mainRef.current?.scrollTop || 0) => {
-    writeStoredSearch({ query, questionMode, scrollTop });
+  const persist = () => {
+    writeStoredSearch({ query, questionMode, scrollTop: 0 });
   };
 
   const close = () => {
@@ -197,6 +222,39 @@ export function BibleSearchSheet({ onClose, onNavigate, T, fontSize = '0.875rem'
     if (startTopRef.current <= 2 && delta > 74) {
       if (verseOnly) setVerseOnly(false);
       else close();
+    }
+  };
+
+  const copyVerse = async (verse: BibleVerseRecord, verseRef: string) => {
+    if (onCopy) {
+      onCopy(verse);
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(`${sanitizeScriptureText(verse.text)}\n${verseRef}`);
+    } catch {
+      // 클립보드 권한이 없는 환경에서는 조용히 무시합니다.
+    }
+  };
+
+  const toggleVerseSave = (verse: BibleVerseRecord, verseRef: string) => {
+    if (onToggleSave) {
+      onToggleSave(verse);
+      return;
+    }
+
+    const storedSaved = readStoredSavedVerses();
+    const exists = storedSaved.some(item => item.ref === verseRef);
+    const next = exists
+      ? storedSaved.filter(item => item.ref !== verseRef)
+      : [{ ref: verseRef, text: sanitizeScriptureText(verse.text), date: new Date().toISOString() }, ...storedSaved];
+
+    try {
+      window.localStorage.setItem(SAVED_STORAGE_KEY, JSON.stringify(next));
+      setLocalSavedRefs(new Set(next.map(item => item.ref)));
+      window.dispatchEvent(new CustomEvent('sion:saved-verses-changed', { detail: { saved: next } }));
+    } catch {
+      // 저장 공간을 사용할 수 없는 환경에서는 현재 화면만 유지합니다.
     }
   };
 
@@ -340,6 +398,8 @@ export function BibleSearchSheet({ onClose, onNavigate, T, fontSize = '0.875rem'
               const section = sectionByVerseId.get(verse.id);
               const previousSection = index > 0 ? sectionByVerseId.get(results[index - 1].id) : null;
               const showSection = questionMode && section && section.id !== previousSection?.id;
+              const verseRef = `${verse.bookName} ${verse.chapter}:${verse.verse}`;
+              const saved = isSaved ? isSaved(verseRef) : localSavedRefs.has(verseRef);
 
               return (
                 <div key={verse.id} className="space-y-3">
@@ -352,25 +412,47 @@ export function BibleSearchSheet({ onClose, onNavigate, T, fontSize = '0.875rem'
                     </div>
                   )}
 
-                  <button
-                    type="button"
-                    onClick={() => {
-                      persist();
-                      onNavigate(verse);
-                    }}
-                    className="group w-full rounded-3xl border bg-white p-5 text-left shadow-sm transition-all active:scale-[0.98]"
-                    style={{ borderColor: T.line }}
-                  >
-                    <div className="mb-2 flex items-center justify-between">
+                  <article className="w-full rounded-3xl border bg-white p-5 text-left shadow-sm" style={{ borderColor: T.line }}>
+                    <div className="mb-2 flex items-center justify-between gap-3">
                       <span className="title-font rounded-lg bg-[#FDF6F0] px-2 py-1 text-xs font-black" style={{ color: T.accent }}>
-                        {verse.bookName} {verse.chapter}:{verse.verse}
+                        {verseRef}
                       </span>
-                      <ArrowRight size={14} className="opacity-40 transition-opacity group-hover:opacity-100" style={{ color: T.accent }} />
+                      <div className="flex flex-shrink-0 items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => void copyVerse(verse, verseRef)}
+                          className="flex h-9 w-9 items-center justify-center rounded-xl border bg-white active:scale-95"
+                          style={{ borderColor: T.line, color: T.sub }}
+                          aria-label={`${verseRef} 복사`}
+                        >
+                          <Copy size={15} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => toggleVerseSave(verse, verseRef)}
+                          className="flex h-9 w-9 items-center justify-center rounded-xl border bg-white active:scale-95"
+                          style={{ borderColor: saved ? T.accent : T.line, color: saved ? T.accent : T.sub, background: saved ? '#EEF6F0' : 'white' }}
+                          aria-label={saved ? `${verseRef} 북마크 해제` : `${verseRef} 북마크`}
+                          aria-pressed={saved}
+                        >
+                          {saved ? <BookmarkCheck size={16} /> : <Bookmark size={16} />}
+                        </button>
+                      </div>
                     </div>
-                    <p className="serif-verse whitespace-pre-wrap break-keep leading-relaxed" style={{ color: T.text, fontSize }}>
-                      {sanitizeScriptureText(verse.text)}
-                    </p>
-                  </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        persist();
+                        onNavigate(verse);
+                      }}
+                      className="w-full rounded-xl text-left active:opacity-70"
+                      aria-label={`${verseRef} 말씀 열기`}
+                    >
+                      <p className="serif-verse whitespace-pre-wrap break-keep leading-relaxed" style={{ color: T.text, fontSize }}>
+                        {sanitizeScriptureText(verse.text)}
+                      </p>
+                    </button>
+                  </article>
                 </div>
               );
             })}
