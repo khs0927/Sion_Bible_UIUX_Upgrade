@@ -1,0 +1,207 @@
+/*
+ * Sion Bible home premium alignment layer.
+ * Keeps the existing information architecture while reducing visual borders,
+ * preventing horizontal drift, and using quieter depth for a premium feel.
+ */
+
+html,
+body,
+#root {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+.home-dashboard {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  margin-inline: auto;
+  overflow-x: clip;
+}
+
+.home-dashboard::before {
+  inset-inline: 0 !important;
+  opacity: .68;
+}
+
+.home-dashboard > *,
+.home-dashboard .surface-card,
+.home-dashboard .home-verse-panel,
+.home-dashboard .home-side-column {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+/* Mood section: same 4 x 3 composition on phones, but quieter cards. */
+.home-dashboard > .home-mood-card {
+  border: 0 !important;
+  border-radius: 26px !important;
+  background: linear-gradient(145deg, rgba(255, 254, 250, .98), rgba(249, 246, 239, .96)) !important;
+  box-shadow:
+    0 10px 30px rgba(64, 51, 38, .065),
+    inset 0 1px 0 rgba(255, 255, 255, .86) !important;
+}
+
+.home-dashboard > .home-mood-card::after {
+  content: none !important;
+}
+
+.home-dashboard > .home-mood-card .mood-chip-grid button {
+  border: 1px solid rgba(85, 69, 52, .075) !important;
+  background: rgba(255, 255, 255, .76) !important;
+  box-shadow:
+    0 3px 10px rgba(69, 53, 38, .035),
+    inset 0 1px 0 rgba(255, 255, 255, .92) !important;
+  border-radius: 19px !important;
+  transform: none !important;
+}
+
+.home-dashboard > .home-mood-card .mood-chip-grid button:hover,
+.home-dashboard > .home-mood-card .mood-chip-grid button:focus-visible {
+  transform: none !important;
+  box-shadow: 0 5px 14px rgba(69, 53, 38, .055) !important;
+}
+
+.home-dashboard > .home-mood-card .mood-chip-grid button[style*="linear-gradient"] {
+  border-color: transparent !important;
+  background: linear-gradient(145deg, #739276, #82a18a) !important;
+  box-shadow: 0 7px 16px rgba(81, 115, 84, .16) !important;
+}
+
+/* Main verse section: remove the double-box feeling. */
+.home-dashboard .home-verse-panel {
+  border: 0 !important;
+  border-radius: 27px !important;
+  background: rgba(255, 254, 250, .97) !important;
+  box-shadow:
+    0 11px 32px rgba(64, 51, 38, .07),
+    inset 0 1px 0 rgba(255, 255, 255, .9) !important;
+}
+
+.home-dashboard .home-verse-panel::after {
+  opacity: .38 !important;
+}
+
+.home-dashboard .home-verse-card {
+  border: 0 !important;
+  border-radius: 22px !important;
+  background-image:
+    linear-gradient(145deg, rgba(255, 253, 247, .94), rgba(250, 247, 240, .90)) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .92),
+    0 4px 14px rgba(73, 57, 41, .045) !important;
+}
+
+.home-dashboard .home-verse-actions button {
+  border: 1px solid rgba(85, 69, 52, .08) !important;
+  background: rgba(255, 255, 255, .72) !important;
+  box-shadow: 0 2px 8px rgba(69, 53, 38, .035) !important;
+  border-radius: 16px !important;
+}
+
+.home-dashboard .home-verse-actions button:active {
+  background: rgba(246, 243, 236, .92) !important;
+}
+
+/* Secondary home cards use separation by tone and spacing, not outlines. */
+.home-dashboard .home-side-column .surface-card,
+.home-dashboard .home-continue-card,
+.home-dashboard .home-journal-card {
+  border: 0 !important;
+  border-radius: 24px !important;
+  box-shadow:
+    0 8px 24px rgba(64, 51, 38, .055),
+    inset 0 1px 0 rgba(255, 255, 255, .8) !important;
+}
+
+.home-dashboard .home-side-column button {
+  border-color: rgba(85, 69, 52, .075) !important;
+  box-shadow: none !important;
+}
+
+/* Header and bottom navigation stay in the same places, with softer chrome. */
+#main-content:has(.home-dashboard) .app-topbar {
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+body:has(.home-dashboard) .app-bottom-nav > div {
+  border: 0 !important;
+  box-shadow: 0 -8px 26px rgba(54, 43, 32, .035) !important;
+}
+
+@media (max-width: 680px) {
+  #main-content:has(.home-dashboard) {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin-inline: auto !important;
+    padding-left: max(16px, env(safe-area-inset-left)) !important;
+    padding-right: max(16px, env(safe-area-inset-right)) !important;
+    overflow-x: clip !important;
+  }
+
+  .home-dashboard {
+    padding-top: 2px !important;
+  }
+
+  .home-dashboard > .home-mood-card .mood-chip-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+  }
+
+  .home-dashboard > .home-mood-card .mood-chip-grid button {
+    min-height: 88px !important;
+    padding: 8px 4px !important;
+    border-radius: 18px !important;
+  }
+
+  .home-dashboard .home-verse-panel {
+    padding: 15px !important;
+  }
+
+  .home-dashboard .home-verse-card {
+    min-height: 216px !important;
+    padding: 24px 18px 18px !important;
+  }
+
+  .home-dashboard .home-verse-actions {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+  }
+
+  .home-dashboard .home-verse-actions button {
+    min-width: 0 !important;
+    min-height: 52px !important;
+    padding-inline: 4px !important;
+  }
+}
+
+@media (max-width: 370px) {
+  #main-content:has(.home-dashboard) {
+    padding-left: max(12px, env(safe-area-inset-left)) !important;
+    padding-right: max(12px, env(safe-area-inset-right)) !important;
+  }
+
+  .home-dashboard > .home-mood-card .mood-chip-grid {
+    gap: 6px !important;
+  }
+
+  .home-dashboard > .home-mood-card .mood-chip-grid button {
+    min-height: 82px !important;
+  }
+
+  .home-dashboard .home-verse-actions {
+    gap: 6px !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-dashboard *,
+  .home-dashboard *::before,
+  .home-dashboard *::after {
+    transition: none !important;
+    animation-duration: .01ms !important;
+  }
+}
