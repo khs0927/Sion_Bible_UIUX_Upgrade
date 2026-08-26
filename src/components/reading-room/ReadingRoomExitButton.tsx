@@ -10,7 +10,7 @@ export function ReadingRoomExitButton({ onExit }: ReadingRoomExitButtonProps) {
       type="button"
       aria-label="통독방 나가기"
       onClick={onExit}
-      className="flex h-9 min-w-9 items-center justify-center gap-1 rounded-full border border-[#DCCFBC] bg-white px-2.5 text-[12px] font-bold text-[#4E7F59] shadow-[0_2px_8px_rgba(0,0,0,0.04)] transition active:scale-95 max-[340px]:px-2"
+      className="flex min-h-11 min-w-11 touch-manipulation items-center justify-center gap-1.5 rounded-full border border-[#DCCFBC] bg-white px-3 text-[12px] font-bold text-[#4E7F59] shadow-[0_2px_8px_rgba(0,0,0,0.04)] active:opacity-75 max-[340px]:px-2.5"
     >
       <DoorOpen className="h-4 w-4 shrink-0" strokeWidth={2} />
       <span className="hidden min-[390px]:inline">통독방 나가기</span>
