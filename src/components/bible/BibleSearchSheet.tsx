@@ -9,16 +9,24 @@ import { sanitizeScriptureText } from '../../utils/textUtils';
 interface BibleSearchSheetProps {
   onClose: () => void;
   onNavigate: (verse: BibleVerseRecord) => void;
-  onCopy: (verse: BibleVerseRecord) => void;
-  onToggleSave: (verse: BibleVerseRecord) => void;
-  isSaved: (ref: string) => boolean;
+  onCopy?: (verse: BibleVerseRecord) => void;
+  onToggleSave?: (verse: BibleVerseRecord) => void;
+  isSaved?: (ref: string) => boolean;
   T: Record<string, string>;
   fontSize?: string;
+}
+
+interface StoredSavedVerse {
+  ref: string;
+  text: string;
+  date?: string;
+  [key: string]: unknown;
 }
 
 const LIMIT = 50;
 const VERSE_ONLY_SCROLL_TOP = 24;
 const STORAGE_KEY = 'sion_bible_search_sheet_state';
+const SAVED_STORAGE_KEY = 'gb_saved';
 
 type StoredSearch = {
   query?: string;
@@ -48,6 +56,16 @@ function writeStoredSearch(value: StoredSearch) {
   }
 }
 
+function readStoredSavedVerses(): StoredSavedVerse[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(SAVED_STORAGE_KEY) || '[]');
+    return Array.isArray(parsed) ? parsed.filter((item): item is StoredSavedVerse => Boolean(item && typeof item.ref === 'string')) : [];
+  } catch {
+    return [];
+  }
+}
+
 export function BibleSearchSheet({ onClose, onNavigate, onCopy, onToggleSave, isSaved, T, fontSize = '0.875rem' }: BibleSearchSheetProps) {
   const [initialStored] = useState<StoredSearch>(() => readStoredSearch());
   const [query, setQuery] = useState(initialStored.query || '');
@@ -60,6 +78,7 @@ export function BibleSearchSheet({ onClose, onNavigate, onCopy, onToggleSave, is
   const [error, setError] = useState('');
   const [searchMeta, setSearchMeta] = useState<AiBibleSearchMeta | null>(null);
   const [verseOnly, setVerseOnly] = useState(false);
+  const [localSavedRefs, setLocalSavedRefs] = useState<Set<string>>(() => new Set(readStoredSavedVerses().map(item => item.ref)));
   const mainRef = useRef<HTMLElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const startYRef = useRef<number | null>(null);
@@ -206,6 +225,39 @@ export function BibleSearchSheet({ onClose, onNavigate, onCopy, onToggleSave, is
     }
   };
 
+  const copyVerse = async (verse: BibleVerseRecord, verseRef: string) => {
+    if (onCopy) {
+      onCopy(verse);
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(`${sanitizeScriptureText(verse.text)}\n${verseRef}`);
+    } catch {
+      // 클립보드 권한이 없는 환경에서는 조용히 무시합니다.
+    }
+  };
+
+  const toggleVerseSave = (verse: BibleVerseRecord, verseRef: string) => {
+    if (onToggleSave) {
+      onToggleSave(verse);
+      return;
+    }
+
+    const storedSaved = readStoredSavedVerses();
+    const exists = storedSaved.some(item => item.ref === verseRef);
+    const next = exists
+      ? storedSaved.filter(item => item.ref !== verseRef)
+      : [{ ref: verseRef, text: sanitizeScriptureText(verse.text), date: new Date().toISOString() }, ...storedSaved];
+
+    try {
+      window.localStorage.setItem(SAVED_STORAGE_KEY, JSON.stringify(next));
+      setLocalSavedRefs(new Set(next.map(item => item.ref)));
+      window.dispatchEvent(new CustomEvent('sion:saved-verses-changed', { detail: { saved: next } }));
+    } catch {
+      // 저장 공간을 사용할 수 없는 환경에서는 현재 화면만 유지합니다.
+    }
+  };
+
   const page = (
     <div
       className="fixed inset-0 z-[9999] flex flex-col bg-[#FDF6F0]"
@@ -347,7 +399,7 @@ export function BibleSearchSheet({ onClose, onNavigate, onCopy, onToggleSave, is
               const previousSection = index > 0 ? sectionByVerseId.get(results[index - 1].id) : null;
               const showSection = questionMode && section && section.id !== previousSection?.id;
               const verseRef = `${verse.bookName} ${verse.chapter}:${verse.verse}`;
-              const saved = isSaved(verseRef);
+              const saved = isSaved ? isSaved(verseRef) : localSavedRefs.has(verseRef);
 
               return (
                 <div key={verse.id} className="space-y-3">
@@ -368,7 +420,7 @@ export function BibleSearchSheet({ onClose, onNavigate, onCopy, onToggleSave, is
                       <div className="flex flex-shrink-0 items-center gap-1.5">
                         <button
                           type="button"
-                          onClick={() => onCopy(verse)}
+                          onClick={() => void copyVerse(verse, verseRef)}
                           className="flex h-9 w-9 items-center justify-center rounded-xl border bg-white active:scale-95"
                           style={{ borderColor: T.line, color: T.sub }}
                           aria-label={`${verseRef} 복사`}
@@ -377,7 +429,7 @@ export function BibleSearchSheet({ onClose, onNavigate, onCopy, onToggleSave, is
                         </button>
                         <button
                           type="button"
-                          onClick={() => onToggleSave(verse)}
+                          onClick={() => toggleVerseSave(verse, verseRef)}
                           className="flex h-9 w-9 items-center justify-center rounded-xl border bg-white active:scale-95"
                           style={{ borderColor: saved ? T.accent : T.line, color: saved ? T.accent : T.sub, background: saved ? '#EEF6F0' : 'white' }}
                           aria-label={saved ? `${verseRef} 북마크 해제` : `${verseRef} 북마크`}
