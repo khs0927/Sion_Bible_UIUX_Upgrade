@@ -1,0 +1,51 @@
+name: Wire Bible search actions
+
+on:
+  push:
+    branches: [fix/search-history-actions]
+
+permissions:
+  contents: write
+
+jobs:
+  patch-app:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/search-history-actions
+          fetch-depth: 0
+
+      - name: Wire search callbacks into App
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('src/App.tsx')
+          text = path.read_text(encoding='utf-8')
+          old = "{isSearchOpen && <BibleSearchSheet onClose={() => setIsSearchOpen(false)} onNavigate={handleSearchNavigate} T={th} fontSize={fsize} />}"
+          new = """{isSearchOpen && <BibleSearchSheet
+            onClose={() => setIsSearchOpen(false)}
+            onNavigate={handleSearchNavigate}
+            onCopy={(verse) => { void copyText(`${verse.bookName} ${verse.chapter}:${verse.verse}`, verse.text); }}
+            onToggleSave={(verse) => toggleSave(`${verse.bookName} ${verse.chapter}:${verse.verse}`, verse.text)}
+            isSaved={isSaved}
+            T={th}
+            fontSize={fsize}
+          />}"""
+          if old not in text:
+              raise SystemExit('BibleSearchSheet invocation not found or already changed')
+          path.write_text(text.replace(old, new, 1), encoding='utf-8')
+          PY
+
+      - name: Commit App wiring
+        shell: bash
+        run: |
+          git config user.name "Sion Bible Bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add src/App.tsx
+          git commit -m "feat(search): connect copy and bookmark actions"
+          git push origin HEAD:fix/search-history-actions
