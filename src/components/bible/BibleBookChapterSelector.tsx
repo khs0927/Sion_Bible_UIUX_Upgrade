@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { BookOpen, ChevronDown, Search, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, BookOpen, ChevronDown, Search, X } from 'lucide-react';
 import { BIBLE_BOOKS, type BibleBook } from '../../data/bibleBooks';
 
 interface BibleBookChapterSelectorProps {
@@ -21,6 +21,25 @@ export function BibleBookChapterSelector({
   const [testament, setTestament] = useState<TestamentFilter>(selectedBook.testament);
   const [step, setStep] = useState<PickerStep>('book');
   const [pendingBook, setPendingBook] = useState<BibleBook>(selectedBook);
+
+  const currentBookIndex = useMemo(
+    () => BIBLE_BOOKS.findIndex((book) => book.id === selectedBook.id),
+    [selectedBook.id],
+  );
+
+  const previousReference = useMemo(() => {
+    if (selectedChapter > 1) return { book: selectedBook, chapter: selectedChapter - 1 };
+    if (currentBookIndex <= 0) return null;
+    const previousBook = BIBLE_BOOKS[currentBookIndex - 1];
+    return { book: previousBook, chapter: previousBook.chapters };
+  }, [currentBookIndex, selectedBook, selectedChapter]);
+
+  const nextReference = useMemo(() => {
+    if (selectedChapter < selectedBook.chapters) return { book: selectedBook, chapter: selectedChapter + 1 };
+    if (currentBookIndex < 0 || currentBookIndex >= BIBLE_BOOKS.length - 1) return null;
+    const nextBook = BIBLE_BOOKS[currentBookIndex + 1];
+    return { book: nextBook, chapter: 1 };
+  }, [currentBookIndex, selectedBook, selectedChapter]);
 
   const filteredBooks = useMemo(
     () => BIBLE_BOOKS.filter((book) => {
@@ -53,11 +72,11 @@ export function BibleBookChapterSelector({
   };
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2.5">
       <button
         type="button"
         onClick={openPicker}
-        className="flex w-full items-center justify-between rounded-[18px] border bg-white px-4 py-3 text-left shadow-sm transition-all active:scale-[0.99]"
+        className="flex w-full touch-manipulation items-center justify-between rounded-[18px] border bg-white px-4 py-3 text-left shadow-sm active:opacity-80"
         style={{ borderColor: '#E8D8C8' }}
         aria-label={`성경 본문 선택, 현재 ${selectedBook.name} ${selectedChapter}장`}
       >
@@ -76,6 +95,29 @@ export function BibleBookChapterSelector({
         </span>
         <ChevronDown size={20} className="flex-shrink-0 text-[#8C786E]" />
       </button>
+
+      <div className="grid grid-cols-2 gap-2" aria-label="이전 장과 다음 장 이동">
+        <button
+          type="button"
+          disabled={!previousReference}
+          onClick={() => previousReference && onSelectReference(previousReference.book, previousReference.chapter)}
+          className="flex min-h-11 touch-manipulation items-center justify-center gap-2 rounded-2xl border border-[#E8D8C8] bg-white px-3 text-xs font-black text-[#6F6259] disabled:cursor-not-allowed disabled:opacity-35 active:opacity-75"
+          aria-label={previousReference ? `${previousReference.book.name} ${previousReference.chapter}장으로 이동` : '이전 장 없음'}
+        >
+          <ArrowLeft size={16} />
+          <span>이전 장</span>
+        </button>
+        <button
+          type="button"
+          disabled={!nextReference}
+          onClick={() => nextReference && onSelectReference(nextReference.book, nextReference.chapter)}
+          className="flex min-h-11 touch-manipulation items-center justify-center gap-2 rounded-2xl border border-[#D8E4D5] bg-[#F5FAF3] px-3 text-xs font-black text-[#4E7F59] disabled:cursor-not-allowed disabled:opacity-35 active:opacity-75"
+          aria-label={nextReference ? `${nextReference.book.name} ${nextReference.chapter}장으로 이동` : '다음 장 없음'}
+        >
+          <span>다음 장</span>
+          <ArrowRight size={16} />
+        </button>
+      </div>
 
       {showPicker && (
         <div className="fixed inset-0 z-[1200] flex items-end sm:items-center sm:justify-center">
@@ -101,7 +143,7 @@ export function BibleBookChapterSelector({
               <button
                 type="button"
                 onClick={() => setShowPicker(false)}
-                className="rounded-full bg-black/5 p-2"
+                className="grid h-11 w-11 touch-manipulation place-items-center rounded-full bg-black/5 active:opacity-70"
                 aria-label="닫기"
               >
                 <X size={20} />
@@ -117,7 +159,7 @@ export function BibleBookChapterSelector({
                         key={value}
                         type="button"
                         onClick={() => setTestament(value)}
-                        className="rounded-xl px-4 py-3 text-sm font-black transition-all"
+                        className="min-h-11 touch-manipulation rounded-xl px-4 py-3 text-sm font-black active:opacity-80"
                         style={{
                           background: testament === value ? '#8D95D8' : 'transparent',
                           color: testament === value ? '#FFFFFF' : '#7B6A5D',
@@ -129,7 +171,7 @@ export function BibleBookChapterSelector({
                     ))}
                   </div>
 
-                  <div className="mb-4 mt-3 flex items-center gap-3 rounded-2xl border border-[#E8D8C8] bg-white px-4 py-3 focus-within:border-[#8D95D8]">
+                  <div className="mb-4 mt-3 flex min-h-12 items-center gap-3 rounded-2xl border border-[#E8D8C8] bg-white px-4 py-3 focus-within:border-[#8D95D8]">
                     <Search size={18} className="text-[#8C786E]" />
                     <input
                       value={bookSearch}
@@ -142,23 +184,29 @@ export function BibleBookChapterSelector({
                 </div>
 
                 <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-[calc(24px+env(safe-area-inset-bottom))]">
-                  <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-                    {filteredBooks.map((book) => (
-                      <button
-                        key={book.id}
-                        type="button"
-                        onClick={() => selectBook(book)}
-                        className="flex min-h-[72px] flex-col items-center justify-center rounded-2xl border bg-white px-2 py-3 text-center transition-all active:scale-95"
-                        style={{
-                          borderColor: selectedBook.id === book.id ? '#8D95D8' : '#E8D8C8',
-                          background: selectedBook.id === book.id ? '#F1F2FF' : '#FFFFFF',
-                        }}
-                      >
-                        <span className="text-xs font-black text-[#3D3129]">{book.name}</span>
-                        <span className="mt-1 text-[10px] font-bold text-[#8C786E]">{book.chapters}장</span>
-                      </button>
-                    ))}
-                  </div>
+                  {filteredBooks.length === 0 ? (
+                    <div className="rounded-2xl border-2 border-dashed border-[#E8D8C8] bg-white/70 px-4 py-10 text-center text-sm font-bold text-[#8C786E]">
+                      검색되는 성경 책이 없습니다.
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+                      {filteredBooks.map((book) => (
+                        <button
+                          key={book.id}
+                          type="button"
+                          onClick={() => selectBook(book)}
+                          className="flex min-h-[72px] touch-manipulation flex-col items-center justify-center rounded-2xl border bg-white px-2 py-3 text-center active:opacity-75"
+                          style={{
+                            borderColor: selectedBook.id === book.id ? '#8D95D8' : '#E8D8C8',
+                            background: selectedBook.id === book.id ? '#F1F2FF' : '#FFFFFF',
+                          }}
+                        >
+                          <span className="text-xs font-black text-[#3D3129]">{book.name}</span>
+                          <span className="mt-1 text-[10px] font-bold text-[#8C786E]">{book.chapters}장</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </>
             ) : (
@@ -167,7 +215,7 @@ export function BibleBookChapterSelector({
                   <button
                     type="button"
                     onClick={() => setStep('book')}
-                    className="rounded-xl border border-[#E8D8C8] bg-white px-3 py-2 text-xs font-black text-[#7B6A5D]"
+                    className="min-h-11 touch-manipulation rounded-xl border border-[#E8D8C8] bg-white px-4 py-2 text-xs font-black text-[#7B6A5D] active:opacity-75"
                   >
                     ← 성경 책 다시 선택
                   </button>
@@ -179,7 +227,7 @@ export function BibleBookChapterSelector({
                         key={chapter}
                         type="button"
                         onClick={() => selectChapter(chapter)}
-                        className="aspect-square rounded-2xl border text-sm font-black transition-all active:scale-95"
+                        className="aspect-square min-h-11 touch-manipulation rounded-2xl border text-sm font-black active:opacity-75"
                         style={{
                           borderColor: pendingBook.id === selectedBook.id && chapter === selectedChapter ? '#8D95D8' : '#E8D8C8',
                           background: pendingBook.id === selectedBook.id && chapter === selectedChapter ? '#8D95D8' : '#FFFFFF',

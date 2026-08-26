@@ -1,4 +1,4 @@
-import { Bell, BookOpenCheck, ClipboardList, Gift, Leaf, Settings } from 'lucide-react';
+import { BookOpenCheck, ClipboardList, Gift, History, Leaf } from 'lucide-react';
 
 type ReadingRoomHeaderProps = {
   onExit: () => void;
@@ -13,7 +13,7 @@ function getHeaderMeta() {
   if (path.startsWith('/reading-room/mission')) return { title: '오늘의 미션', icon: BookOpenCheck, subpage: true };
   if (path.startsWith('/reading-room/courses')) return { title: '코스', icon: Leaf, subpage: false };
   if (path.startsWith('/reading-room/my-courses')) return { title: '나의 코스', icon: ClipboardList, subpage: false };
-  if (path.startsWith('/reading-room/records')) return { title: '읽기 기록', icon: Leaf, subpage: false };
+  if (path.startsWith('/reading-room/records')) return { title: '읽기 기록', icon: History, subpage: false };
   if (path.startsWith('/reading-room/rewards')) return { title: '보상', icon: Gift, subpage: false };
   return { title: '통독', icon: ClipboardList, subpage: false };
 }
@@ -22,7 +22,7 @@ function navigate(path: string) {
   if (typeof window === 'undefined') return;
   if (window.location.pathname !== path) window.history.pushState({}, '', path);
   window.dispatchEvent(new PopStateEvent('popstate'));
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+  window.scrollTo({ top: 0 });
 }
 
 export function ReadingRoomHeader({ onExit, onOpenBible }: ReadingRoomHeaderProps) {
@@ -31,10 +31,10 @@ export function ReadingRoomHeader({ onExit, onOpenBible }: ReadingRoomHeaderProp
   if (meta.subpage) return null;
 
   return (
-    <header className="sticky top-0 z-40 border-b border-[#EDE3D5]/80 bg-[#FBF7EF]/92 px-5 pb-3 pt-[calc(12px+env(safe-area-inset-top))] backdrop-blur-xl">
-      <div className="flex h-12 items-center justify-between gap-3">
-        <button type="button" onClick={onExit} aria-label="통독방 홈으로 나가기" className="flex min-w-0 items-center gap-3 text-left active:scale-[0.98]">
-          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-[14px] border border-[#E6DDCF] bg-white text-[#4E7F59] shadow-[0_4px_12px_rgba(80,65,42,.06)]">
+    <header className="sticky top-0 z-40 border-b border-[#EDE3D5]/80 bg-[#FBF7EF]/94 px-4 pb-3 pt-[calc(12px+env(safe-area-inset-top))] backdrop-blur-xl sm:px-5">
+      <div className="flex min-h-12 items-center justify-between gap-2">
+        <button type="button" onClick={onExit} aria-label="통독방 홈으로 나가기" className="flex min-w-0 touch-manipulation items-center gap-3 rounded-2xl text-left active:opacity-75">
+          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-[14px] border border-[#E6DDCF] bg-white text-[#4E7F59] shadow-[0_4px_12px_rgba(80,65,42,.06)]">
             <HeaderIcon className="h-[23px] w-[23px]" strokeWidth={2} />
           </span>
           <span className="min-w-0">
@@ -43,18 +43,17 @@ export function ReadingRoomHeader({ onExit, onOpenBible }: ReadingRoomHeaderProp
           </span>
         </button>
 
-        <div className="flex shrink-0 items-center gap-1.5">
-          <button type="button" onClick={() => navigate('/reading-room/records')} aria-label="통독 알림과 기록" className="relative grid h-10 w-10 place-items-center rounded-full text-[#3D3934] transition active:scale-90">
-            <Bell className="h-[22px] w-[22px]" strokeWidth={1.9} />
-            <span className="absolute right-[7px] top-[7px] h-2 w-2 rounded-full border border-[#FBF7EF] bg-[#F06D45]" />
+        <nav aria-label="통독 빠른 메뉴" className="flex shrink-0 items-center gap-1">
+          <button type="button" onClick={() => navigate('/reading-room/records')} aria-label="읽기 기록 열기" title="읽기 기록" className="grid h-11 w-11 touch-manipulation place-items-center rounded-full text-[#3D3934] active:bg-black/5 active:opacity-70">
+            <History className="h-[21px] w-[21px]" strokeWidth={1.9} />
           </button>
-          <button type="button" onClick={() => navigate('/reading-room/rewards')} aria-label="통독 설정과 보상" className="grid h-10 w-10 place-items-center rounded-full text-[#3D3934] transition active:scale-90">
-            <Settings className="h-[22px] w-[22px]" strokeWidth={1.9} />
+          <button type="button" onClick={() => navigate('/reading-room/rewards')} aria-label="통독 보상 열기" title="보상" className="grid h-11 w-11 touch-manipulation place-items-center rounded-full text-[#3D3934] active:bg-black/5 active:opacity-70">
+            <Gift className="h-[21px] w-[21px]" strokeWidth={1.9} />
           </button>
-          <button type="button" onClick={onOpenBible} aria-label="성경 본문 열기" title="성경 본문 열기" className="grid h-10 w-10 place-items-center rounded-full border border-[#D8E2D4] bg-[#F7FBF5] text-[#4E7F59] transition active:scale-90">
+          <button type="button" onClick={onOpenBible} aria-label="성경 본문 열기" title="성경 본문" className="grid h-11 w-11 touch-manipulation place-items-center rounded-full border border-[#D8E2D4] bg-[#F7FBF5] text-[#4E7F59] active:opacity-70">
             <BookOpenCheck className="h-[20px] w-[20px]" strokeWidth={2} />
           </button>
-        </div>
+        </nav>
       </div>
     </header>
   );
