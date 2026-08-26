@@ -2,6 +2,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import './index.css';
 import './sionUiPatches';
+import './homePremium.css';
 import App from './App';
 import { initializeMemoryReminderEngine } from './services/memoryReminder';
 import { initializeReadingRoomEnhancements } from './readingRoomEnhancements';
