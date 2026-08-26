@@ -171,8 +171,8 @@ export function BibleSearchSheet({ onClose, onNavigate, T, fontSize = '0.875rem'
 
   const handleScroll = (event: ReactUIEvent<HTMLElement>) => {
     const scrollTop = event.currentTarget.scrollTop;
-    setVerseOnly(results.length > 0 && scrollTop > VERSE_ONLY_SCROLL_TOP);
-    persist(scrollTop);
+    const nextVerseOnly = results.length > 0 && scrollTop > VERSE_ONLY_SCROLL_TOP;
+    if (nextVerseOnly !== verseOnly) setVerseOnly(nextVerseOnly);
   };
 
   const handleTouchStart = (event: ReactTouchEvent<HTMLElement>) => {
@@ -211,7 +211,7 @@ export function BibleSearchSheet({ onClose, onNavigate, T, fontSize = '0.875rem'
         overscrollBehavior: 'contain',
       }}
     >
-      <header className={`flex-shrink-0 overflow-hidden bg-[#FDF6F0] px-6 transition-all duration-300 ${verseOnly ? 'max-h-0 pb-0 pt-0 opacity-0 pointer-events-none' : 'max-h-28 pb-4 pt-5 opacity-100'}`}>
+      <header className={`flex-shrink-0 overflow-hidden bg-[#FDF6F0] px-6 ${verseOnly ? 'max-h-0 pb-0 pt-0 opacity-0 pointer-events-none' : 'max-h-28 pb-4 pt-5 opacity-100'}`}>
         <div className="flex items-center justify-between gap-4">
           <div className="flex min-w-0 items-center gap-3">
             <div className="rounded-2xl border bg-white p-2 shadow-sm" style={{ borderColor: T.line }}>
@@ -230,7 +230,7 @@ export function BibleSearchSheet({ onClose, onNavigate, T, fontSize = '0.875rem'
         </div>
       </header>
 
-      <section className={`flex-shrink-0 overflow-hidden bg-[#FDF6F0] px-6 transition-all duration-300 ${verseOnly ? 'max-h-0 pb-0 opacity-0 pointer-events-none' : 'max-h-[610px] pb-5 opacity-100'}`}>
+      <section className={`flex-shrink-0 overflow-hidden bg-[#FDF6F0] px-6 ${verseOnly ? 'max-h-0 pb-0 opacity-0 pointer-events-none' : 'max-h-[610px] pb-5 opacity-100'}`}>
         <div className="mb-3 grid grid-cols-2 gap-2">
           <button
             type="button"
@@ -315,7 +315,7 @@ export function BibleSearchSheet({ onClose, onNavigate, T, fontSize = '0.875rem'
         onScroll={handleScroll}
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
-        className={`flex-1 overflow-y-auto pb-10 transition-all duration-300 ${verseOnly ? 'px-4 pt-3' : 'px-6'}`}
+        className={`flex-1 overflow-y-auto pb-10 ${verseOnly ? 'px-4 pt-3' : 'px-6'}`}
         style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}
       >
         {verseOnly && totalCount > 0 && (
@@ -323,7 +323,7 @@ export function BibleSearchSheet({ onClose, onNavigate, T, fontSize = '0.875rem'
             <button
               type="button"
               onClick={() => {
-                mainRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+                mainRef.current?.scrollTo({ top: 0 });
                 setVerseOnly(false);
               }}
               className="w-full rounded-2xl border bg-white px-4 py-3 text-left text-xs font-black shadow-sm active:scale-[0.99]"
