@@ -32,6 +32,9 @@ jobs:
       - name: Audit Bible index
         run: npm run audit:bible
 
+      - name: Audit verse annotation scope
+        run: npm run audit:verse-annotations
+
       - name: Typecheck
         run: npm run typecheck
 
