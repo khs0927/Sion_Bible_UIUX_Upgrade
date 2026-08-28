@@ -41,13 +41,46 @@ const HIGHLIGHT_COLORS: Record<HighlightColor, string> = {
   purple: '#E7DBFF',
 };
 
-function annotationKey(verse: number) {
-  return `sion_bible_annotation_${window.location.pathname}_${verse}`;
+const ANNOTATION_STORAGE_PREFIX = 'sion_bible_annotation_v2';
+const LEGACY_ANNOTATION_PREFIX = 'sion_bible_annotation_';
+const LEGACY_ANNOTATION_CLEANUP_KEY = 'sion_bible_annotation_legacy_cleanup_v2';
+
+function annotationScope(referenceLabel: string) {
+  const normalized = referenceLabel.trim();
+  return encodeURIComponent(normalized || 'unknown-reference');
 }
 
-function readAnnotation(verse: number): VerseAnnotation | null {
+function annotationKey(referenceLabel: string, verse: number) {
+  return `${ANNOTATION_STORAGE_PREFIX}_${annotationScope(referenceLabel)}_${verse}`;
+}
+
+function clearLegacyAnnotationsOnce() {
   try {
-    const raw = localStorage.getItem(annotationKey(verse));
+    if (localStorage.getItem(LEGACY_ANNOTATION_CLEANUP_KEY) === '1') return;
+
+    const legacyKeys: string[] = [];
+    for (let index = 0; index < localStorage.length; index += 1) {
+      const key = localStorage.key(index);
+      if (!key) continue;
+      if (
+        key.startsWith(LEGACY_ANNOTATION_PREFIX)
+        && !key.startsWith(`${ANNOTATION_STORAGE_PREFIX}_`)
+        && key !== LEGACY_ANNOTATION_CLEANUP_KEY
+      ) {
+        legacyKeys.push(key);
+      }
+    }
+
+    for (const key of legacyKeys) localStorage.removeItem(key);
+    localStorage.setItem(LEGACY_ANNOTATION_CLEANUP_KEY, '1');
+  } catch {
+    // localStorage can be unavailable in private/restricted browser contexts.
+  }
+}
+
+function readAnnotation(referenceLabel: string, verse: number): VerseAnnotation | null {
+  try {
+    const raw = localStorage.getItem(annotationKey(referenceLabel, verse));
     if (!raw) return null;
     const parsed = JSON.parse(raw) as Partial<VerseAnnotation>;
     if (!parsed.color || !Object.prototype.hasOwnProperty.call(HIGHLIGHT_COLORS, parsed.color)) return null;
@@ -79,15 +112,17 @@ export function BibleVerseSelectableList({
   const dragStartY = useRef<number | null>(null);
 
   useEffect(() => {
+    clearLegacyAnnotationsOnce();
+
     const next: Record<number, VerseAnnotation> = {};
     for (const verse of verses) {
-      const stored = readAnnotation(verse.verse);
+      const stored = readAnnotation(referenceLabel, verse.verse);
       if (stored) next[verse.verse] = stored;
     }
     setAnnotations(next);
     setActiveVerse(null);
     setDetailTab(null);
-  }, [verses]);
+  }, [referenceLabel, verses]);
 
   const activeAnnotation = useMemo(
     () => activeVerse ? annotations[activeVerse] ?? { color: 'yellow' as const, underline: 'none' as const } : null,
@@ -114,12 +149,12 @@ export function BibleVerseSelectableList({
       ...patch,
     };
     setAnnotations((current) => ({ ...current, [activeVerse]: next }));
-    localStorage.setItem(annotationKey(activeVerse), JSON.stringify(next));
+    localStorage.setItem(annotationKey(referenceLabel, activeVerse), JSON.stringify(next));
   };
 
   const clearAnnotation = () => {
     if (!activeVerse) return;
-    localStorage.removeItem(annotationKey(activeVerse));
+    localStorage.removeItem(annotationKey(referenceLabel, activeVerse));
     setAnnotations((current) => {
       const next = { ...current };
       delete next[activeVerse];
