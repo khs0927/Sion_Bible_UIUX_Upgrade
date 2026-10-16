@@ -23,6 +23,7 @@
     "audit:reading-ui": "node scripts/audit-reading-ui-unification.mjs",
     "audit:design-consistency": "node scripts/audit-design-consistency.mjs",
     "test:api": "node scripts/test-verse-devotion.mjs",
+    "test:ui": "playwright test",
     "verify": "npm run build:checks && npm run build",
     "ai:list-nvidia-models": "node scripts/benchmark-nvidia-models.mjs --list",
     "ai:benchmark-nvidia": "node scripts/benchmark-nvidia-models.mjs --benchmark",
@@ -42,6 +43,7 @@
     "tailwind-merge": "3.4.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.1",
     "@tailwindcss/vite": "4.1.17",
     "@types/node": "22.19.17",
     "@types/react": "19.2.7",
